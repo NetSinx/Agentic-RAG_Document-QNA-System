@@ -72,10 +72,10 @@ function App() {
             const parsedData = JSON.parse(line);
 
             if (parsedData.status) {
-              setStatus(parsedData.status);
+              setStatus(parsedData.status + "...");
             } 
             else if (parsedData.message) {
-              setStatus(parsedData.status)
+              setStatus(parsedData.status + "...")
               setAnswer((prev) => prev + parsedData.message);
             }
             else if (parsedData.error) {
@@ -99,7 +99,9 @@ function App() {
     <div className="page-layout">
       <nav className="neon-navbar">
         <div className="navbar-brand">
-          <span className="navbar-logo">🤖</span>
+          <span className="navbar-logo">
+            <img src="/ai-rag.png" alt="AI RAG Logo" width="40" height="40" />
+          </span>
           <span className="navbar-title">Agentic RAG AI</span>
         </div>
         <div className="navbar-actions">
