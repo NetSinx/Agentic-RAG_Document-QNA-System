@@ -34,7 +34,7 @@ class FormInput:
     query: str = Field(..., min_length=1, description="The question to ask")
     file: UploadFile = Field(..., description="The document to upload")
 
-async def run_agentic_rag(query: str, temp_file_path: str) -> AsyncGenerator[bytes, None]:
+async def run_agentic_rag(query: str, temp_file_path: str, filename: str) -> AsyncGenerator[bytes, None]:
     try:
         yield encode_json({"status": "Loading Document..."}) + b"\n"
         
@@ -52,35 +52,36 @@ async def run_agentic_rag(query: str, temp_file_path: str) -> AsyncGenerator[byt
         vectorstore = await asyncio.to_thread(create_vectorstore)
         
         def load_doc():
-            file_id = hashlib.sha256(temp_file_path.encode()).hexdigest()
+            file_id = hashlib.sha256(filename.encode()).hexdigest()
             existing_docs = vectorstore.get(where={"source_file_id": file_id})
 
             if existing_docs["ids"]:
                 print("Dokumen sudah ada di Chroma DB. Proses DoclingLoader dilewati!")
-                return existing_docs
+                return existing_docs['documents']
             else:
                 print("Dokumen baru ditemukan. Menjalankan DoclingLoader...")
                 
                 loader = DoclingLoader(file_path=temp_file_path)
                 documents = loader.load()
+
+                text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+                    chunk_size=1000,
+                    chunk_overlap=200,
+                )
+
+                doc_splits = text_splitter.split_documents(documents)
+                doc_splits = filter_complex_metadata(doc_splits)
+
+                vectorstore.add_documents(doc_splits)
                 
                 for doc in documents:
                     doc.metadata["source_file_id"] = file_id
-                    
-                vectorstore.add_documents(documents)
+
                 return documents
             
-        documents = await asyncio.to_thread(load_doc)
-
+        await asyncio.to_thread(load_doc)
+        
         yield encode_json({"status": "Embedding Document..."}) + b"\n"
-
-        text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-            chunk_size=1000,
-            chunk_overlap=200,
-        )
-
-        doc_splits = text_splitter.split_documents(documents)
-        doc_splits = filter_complex_metadata(doc_splits)
         
         @tool
         async def retrieve_information_by_document(query: str) -> str:
@@ -195,7 +196,7 @@ async def chat(data: MultipartBody[FormInput]) -> Stream:
         temp_file.write(document)
         temp_file_path = temp_file.name
 
-    return Stream(run_agentic_rag(data.query, temp_file_path))
+    return Stream(run_agentic_rag(data.query, temp_file_path, filename))
 
 cors_config = CORSConfig(allow_origins=["*"])
 
