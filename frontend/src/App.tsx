@@ -98,6 +98,10 @@ function App() {
     }
   };
 
+  let displayAnswer = answer;
+  displayAnswer = displayAnswer.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  displayAnswer = displayAnswer.replace(/<think>[\s\S]*$/gi, '');
+
   return (
     <div className="page-layout">
       <nav className="navbar">
@@ -187,7 +191,7 @@ function App() {
               <div className="answer-box">
                 <div className="answer-text">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {answer + (isLoading ? ' ▍' : '')}
+                    {displayAnswer.trim() + (isLoading ? ' ▍' : '')}
                   </ReactMarkdown>
                 </div>
               </div>

@@ -25,6 +25,7 @@ from litestar.response import Stream
 from langchain_core.runnables import RunnableConfig
 import traceback
 import asyncio
+from functools import lru_cache
 from litestar.config.cors import CORSConfig
 
 load_dotenv()
@@ -36,6 +37,8 @@ class FormInput:
 
 async def run_agentic_rag(query: str, temp_file_path: str, filename: str) -> AsyncGenerator[bytes, None]:
     try:
+        yield encode_json({"status": "Loading Document..."}) + b"\n"
+
         def create_vectorstore():
             vector_store = Chroma(
                 embedding_function=HuggingFaceEmbeddings(
@@ -48,45 +51,38 @@ async def run_agentic_rag(query: str, temp_file_path: str, filename: str) -> Asy
             return vector_store
         
         vectorstore = await asyncio.to_thread(create_vectorstore)
-        
+
         def load_doc():
             file_id = hashlib.sha256(filename.encode()).hexdigest()
             existing_docs = vectorstore.get(where={"source_file_id": file_id})
-
             if existing_docs["ids"]:
-                print("Dokumen sudah ada di Chroma DB. Proses DoclingLoader dilewati!")
-                return existing_docs['documents']
-            else:
-                yield encode_json({"status": "Loading Document..."}) + b"\n"
+                return
 
-                print("Dokumen baru ditemukan. Menjalankan DoclingLoader...")
-                
-                loader = DoclingLoader(file_path=temp_file_path)
-                documents = loader.load()
+            loader = DoclingLoader(file_path=temp_file_path)
+            documents = loader.load()
 
-                yield encode_json({"status": "Embedding Document..."}) + b"\n"
+            for doc in documents:
+                doc.metadata["source_file_id"] = file_id
 
-                text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=1000,
-                    chunk_overlap=200,
-                )
+            text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+                chunk_size=1000,
+                chunk_overlap=200,
+            )
 
-                doc_splits = text_splitter.split_documents(documents)
-                doc_splits = filter_complex_metadata(doc_splits)
+            doc_splits = text_splitter.split_documents(documents)
+            doc_splits = filter_complex_metadata(doc_splits)
 
-                vectorstore.add_documents(doc_splits)
-                
-                for doc in documents:
-                    doc.metadata["source_file_id"] = file_id
-
-                return documents
-            
-        await asyncio.to_thread(load_doc)
+            vectorstore.add_documents(doc_splits)
         
+        await asyncio.to_thread(load_doc)
+
+        yield encode_json({"status": "Embedding Document..."}) + b"\n"
+
         @tool
         async def retrieve_information_by_document(query: str) -> str:
             """Mencari informasi yang relevan dari dokumen menggunakan query teks."""
-            retrieved_docs = vectorstore.similarity_search(query, k=2)
+            retrieved_docs = vectorstore.similarity_search(query, k=3)
+            
             return "\n\n".join([doc.page_content for doc in retrieved_docs])
 
         retriever_tool = retrieve_information_by_document
