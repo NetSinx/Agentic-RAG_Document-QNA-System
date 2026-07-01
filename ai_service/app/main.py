@@ -52,6 +52,8 @@ async def run_agentic_rag(query: str, temp_file_path: str, filename: str) -> Asy
         
         vectorstore = await asyncio.to_thread(create_vectorstore)
 
+        yield encode_json({"status": "Embedding Document..."}) + b"\n"
+
         def load_doc():
             file_id = hashlib.sha256(filename.encode()).hexdigest()
             existing_docs = vectorstore.get(where={"source_file_id": file_id})
@@ -75,8 +77,6 @@ async def run_agentic_rag(query: str, temp_file_path: str, filename: str) -> Asy
             vectorstore.add_documents(doc_splits)
         
         await asyncio.to_thread(load_doc)
-
-        yield encode_json({"status": "Embedding Document..."}) + b"\n"
 
         @tool
         async def retrieve_information_by_document(query: str) -> str:
