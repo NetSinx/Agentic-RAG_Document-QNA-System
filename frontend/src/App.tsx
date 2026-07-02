@@ -8,7 +8,7 @@ function App() {
   const [link, setLink] = useState('');
   const [answer, setAnswer] = useState('');
   const [status, setStatus] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -50,10 +50,13 @@ function App() {
 
     const formData = new FormData();
     formData.append('query', query.trim());
-    formData.append('file', selectedFile); 
-    formData.append('link', link.trim());
+    if (selectedFile) {
+      formData.append('file', selectedFile); 
+    }
+    formData.append('link', link);
 
-    console.log(formData.get('file'));
+    console.log(formData.get('link'))
+    console.log(typeof(formData.get('link')))
 
     try {
       const response = await fetch('http://localhost:8000/api/chat', {

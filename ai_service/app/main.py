@@ -14,6 +14,7 @@ from langchain.messages import HumanMessage
 from langgraph.graph import MessagesState
 from langchain_docling.loader import DoclingLoader
 from langchain_community.vectorstores.utils import filter_complex_metadata
+from typing import Optional
 from dataclasses import dataclass
 import hashlib
 import requests
@@ -21,10 +22,11 @@ import bs4
 from langchain_core.documents import Document
 from litestar import Litestar, post
 from litestar.datastructures import UploadFile
-from litestar.params import MultipartBody
+from litestar.params import MultipartBody, Body
 from collections.abc import AsyncGenerator
 from litestar.serialization import encode_json
 from litestar.response import Stream
+from litestar.enums import RequestEncodingType
 from langchain_core.runnables import RunnableConfig
 import traceback
 import asyncio
@@ -36,8 +38,8 @@ load_dotenv()
 @dataclass
 class FormInput:
     query: str
-    file: UploadFile | None
-    link: str | None
+    file: Optional[UploadFile] = None
+    link: str | None = None
 
 async def run_agentic_rag(query: str, temp_file_path: str | None, filename: str | None, link: str | list[str] | None) -> AsyncGenerator[bytes, None]:
     if temp_file_path is None and filename is None and link is None or link == "":
@@ -203,8 +205,10 @@ async def run_agentic_rag(query: str, temp_file_path: str | None, filename: str 
             os.remove(temp_file_path)
 
 @post(path="/api/chat")
-async def chat(data: MultipartBody[FormInput]) -> Stream:
+async def chat(data: FormInput = Body(media_type=RequestEncodingType.MULTI_PART)) -> Stream:
     link = data.link
+
+    print("data.file: ", type(data.file))
 
     if data.file is not None and (link is None or link == ""):
         document = await data.file.read()
