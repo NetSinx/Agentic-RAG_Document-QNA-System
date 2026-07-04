@@ -78,10 +78,7 @@ async def run_agentic_rag(query: str, temp_file_path: str | None, filename: str 
                 for doc in documents:
                     doc.metadata["source_file_id"] = file_id
             elif link is not None and temp_file_path is None and filename is None:
-                if isinstance(link, list) and all(isinstance(l, str) for l in link):
-                    file_id = hashlib.sha256(str(link).encode()).hexdigest()
-                else:
-                    file_id = hashlib.sha256(link.encode()).hexdigest()
+                file_id = hashlib.sha256(str(link).encode()).hexdigest()
                 existing_docs = vectorstore.get(where={"source_file_id": file_id})
                 if existing_docs["ids"]:
                     return
@@ -218,9 +215,9 @@ async def run_agentic_rag(query: str, temp_file_path: str | None, filename: str 
 
 @post(path="/api/chat")
 async def chat(data: FormInput = Body(media_type=RequestEncodingType.MULTI_PART)) -> Stream:
-    link = ast.literal_eval(data.link)
+    link = data.link
 
-    if data.file is not None and (link is None or link == "" or link == []):
+    if data.file is not None and link is None:
         document = await data.file.read()
         filename = data.file.filename
 
@@ -252,7 +249,15 @@ async def chat(data: FormInput = Body(media_type=RequestEncodingType.MULTI_PART)
             temp_file_path = temp_file.name
         
         return Stream(run_agentic_rag(data.query, temp_file_path, filename, None))
-    elif (link is not None or link != "" or link != []) and data.file is None:
+    elif link is not None and data.file is None:
+        if ',' in link and len(link.split(",")) > 1:
+            if link.split(",")[len(link.split(","))-1].strip() == '':
+                link = link.split(",")[len(link.split(","))-2]
+                print("Link: ", link)
+            else:
+                link = link.split(",")
+                print("Link: ", link)
+
         return Stream(run_agentic_rag(data.query, None, None, link))
     else:
         return Stream(run_agentic_rag(data.query, None, None, None))

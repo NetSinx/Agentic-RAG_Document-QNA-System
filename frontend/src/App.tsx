@@ -7,7 +7,6 @@ import './App.css'
 function App() {
   const [query, setQuery] = useState('');
   const [link, setLink] = useState('');
-  const [arrayLink, setArrayLink] = useState<string[]>([]);
   const [answer, setAnswer] = useState('');
   const [status, setStatus] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined);
@@ -34,12 +33,6 @@ function App() {
     e.preventDefault();
     setSelectedFile(null);
   };
-
-  useEffect(() => {
-    if (link.includes(",") && link.split(",").length > 1) {
-      setArrayLink(link.split(","));
-    }
-  }, [link])
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -68,14 +61,9 @@ function App() {
 
     const formData = new FormData();
     formData.append('query', query.trim());
+    formData.append('link', link.trim());
     if (selectedFile) {
       formData.append('file', selectedFile); 
-    }
-
-    if (arrayLink && arrayLink.length > 0) {
-      formData.append('link', JSON.stringify(arrayLink));
-    } else {
-      formData.append('link', link);
     }
 
     try {
