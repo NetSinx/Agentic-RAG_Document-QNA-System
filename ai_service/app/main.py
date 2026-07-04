@@ -251,12 +251,7 @@ async def chat(data: FormInput = Body(media_type=RequestEncodingType.MULTI_PART)
         return Stream(run_agentic_rag(data.query, temp_file_path, filename, None))
     elif link is not None and data.file is None:
         if ',' in link and len(link.split(",")) > 1:
-            if link.split(",")[len(link.split(","))-1].strip() == '':
-                link = link.split(",")[len(link.split(","))-2]
-                print("Link: ", link)
-            else:
-                link = link.split(",")
-                print("Link: ", link)
+            link = [l.strip() for l in link.split(",") if l.strip() != ""]
 
         return Stream(run_agentic_rag(data.query, None, None, link))
     else:
