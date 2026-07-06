@@ -9,7 +9,7 @@ function App() {
   const [link, setLink] = useState('');
   const [answer, setAnswer] = useState('');
   const [status, setStatus] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
