@@ -67,7 +67,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat', {
+      const response = await fetch(import.meta.env.VITE_AI_SERVICE_URL, {
         method: 'POST',
         body: formData,
         signal: abortControllerRef.current.signal,
